@@ -49,21 +49,6 @@ function readPackageJson (manifestDir: string): unknown {
   return JSON.parse(manifestText)
 }
 
-async function writePackageTarball (tarballPath: string, manifest: ProjectManifest): Promise<void> {
-  const pack = tar.pack()
-  pack.entry({ name: 'package/package.json' }, JSON.stringify(manifest, undefined, 2))
-  pack.entry({ name: 'package/index.js' }, '')
-
-  const tarball = fs.createWriteStream(tarballPath)
-  pack.pipe(createGzip()).pipe(tarball)
-  pack.finalize()
-
-  return new Promise((resolve, reject) => {
-    tarball.on('close', resolve)
-    tarball.on('error', reject)
-  })
-}
-
 test('deploy with a shared lockfile after full install', async () => {
   const projectNames = ['project-1', 'project-2', 'project-3', 'project-4', 'project-5'] as const
 
@@ -345,6 +330,21 @@ test('deploy with a shared lockfile reuses local tarball package name from the w
   const lockfilePackages = Object.keys(project.readLockfile().packages ?? {})
   expect(lockfilePackages).toStrictEqual([expect.stringMatching(/^tar-pkg@file:/)])
 })
+
+async function writePackageTarball (tarballPath: string, manifest: ProjectManifest): Promise<void> {
+  const pack = tar.pack()
+  pack.entry({ name: 'package/package.json' }, JSON.stringify(manifest, undefined, 2))
+  pack.entry({ name: 'package/index.js' }, '')
+
+  const tarball = fs.createWriteStream(tarballPath)
+  pack.pipe(createGzip()).pipe(tarball)
+  pack.finalize()
+
+  return new Promise((resolve, reject) => {
+    tarball.on('close', resolve)
+    tarball.on('error', reject)
+  })
+}
 
 test('the deploy manifest should inherit some fields from the pnpm object from the root manifest and the manifest of the selected project', async () => {
   const rootOverrides = {
